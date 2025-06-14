@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QuantumCamRNG Demo</title>
+    <script type="module" src="quantum_cam_rng.js"></script>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 2rem; }
+      .grid { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; max-width: 980px; }
+      label { font-weight: 600; margin-right: 0.4rem; }
+      input[type="number"], input[type="text"] { width: 100%; }
+      button { padding: 0.5rem 1rem; border-radius: 0.5rem; border: 1px solid #ccc; cursor: pointer; }
+      button:disabled { opacity: 0.5; cursor: not-allowed; }
+      textarea { width: 100%; font-family: monospace; }
+      textarea[readonly] { background: #fafafa; }
+      .result { white-space: pre-wrap; padding: 0.5rem; background: #f6f6f6; border-radius: 0.5rem; }
+    </style>
+  </head>
+  <body>
+    <h1>QuantumCamRNG – Browser Demo</h1>
+
+    <div class="grid" id="controls">
+      <!-- Config row -->
+      <div>
+        <label>Patch size</label>
+        <input type="number" id="patchSize" value="50" min="1" />
+      </div>
+      <div>
+        <label><input type="checkbox" id="fullBits" /> Keep full patch bits</label>
+      </div>
+      <div>
+        <button id="startBtn">Start RNG</button>
+        <button id="stopBtn" disabled>Stop RNG</button>
+        <button id="reinitBtn" disabled>Reinitialize</button>
+      </div>
+      <div></div>
+
+      <!-- Floats -->
+      <div>
+        <h3>Random floats</h3>
+        <label>Count</label>
+        <input type="number" id="floatCount" value="5" min="1" />
+        <button id="genFloats">Generate</button>
+        <div class="result" id="floatsRes"></div>
+      </div>
+
+      <!-- Integers list -->
+      <div>
+        <h3>Random integers</h3>
+        <label>Low</label><input type="number" id="intLow" value="0" />
+        <label>High&nbsp;</label><input type="number" id="intHigh" value="100" />
+        <label>Count</label><input type="number" id="intCount" value="10" min="1" />
+        <button id="genInts">Generate</button>
+        <div class="result" id="intsRes"></div>
+      </div>
+
+      <!-- Shuffle -->
+      <div>
+        <h3>Shuffle array</h3>
+        <textarea id="shuffleInput" rows="3">[1,2,3,4,5]</textarea><br/>
+        <button id="shuffleBtn">Shuffle</button>
+        <div class="result" id="shuffleRes"></div>
+      </div>
+
+	<!-- Sample -->
+	<div>
+	  <h3>Sample array (comma or newline separated)</h3>
+	  <textarea id="sampleInput" rows="3">alpha, beta, gamma
+	delta
+	epsilon</textarea><br/>
+	  <label>k</label><input type="number" id="sampleK" value="2" min="1" />
+	  <button id="sampleBtn">Sample</button>
+	  <div class="result" id="sampleRes"></div>
+	</div>
+
+
+      <!-- Custom random ints from list -->
+      <div>
+        <h3>Random ints from bounds</h3>
+        <label>Input list (e.g. 10, 20, 30)</label><br/>
+        <input type="text" id="intBoundsList" value="10,20,30" /><br/>
+        <button id="genBoundsInts">Generate</button>
+        <div class="result" id="boundsIntsRes"></div>
+      </div>
+
+      <!-- Live bit stream -->
+      <div style="grid-column: 1 / -1;">
+        <h3>Live bit stream (last 1,000 bits)</h3>
+        <textarea id="bitStream" rows="5" readonly></textarea>
+      </div>
+    </div>
+
+    <video id="preview" width="320" height="240" autoplay muted style="margin-top:2rem; border:1px solid #ccc;"></video>
+
+    <script type="module">
+      import { QuantumCamRNG } from './quantum_cam_rng.js';
+
+      const qs = id => document.getElementById(id);
+      const startBtn   = qs('startBtn');
+      const stopBtn    = qs('stopBtn');
+      const reinitBtn  = qs('reinitBtn');
+      const patchSize  = qs('patchSize');
+      const fullBits   = qs('fullBits');
+      const videoPrev  = qs('preview');
+
+      const rngRef = { current: null };
+      let bitLoopHandle = null;
+      const BIT_WINDOW = 1000;
+
+      function stopBitLoop() {
+        if (bitLoopHandle) clearTimeout(bitLoopHandle);
+        bitLoopHandle = null;
+      }
+
+      async function startBitLoop() {
+        stopBitLoop(); // ensure no duplicate loops
+        const outEl = qs('bitStream');
+        let buffer = '';
+
+        async function step() {
+          if (!rngRef.current) return; // stopped
+          const bitsArr = await rngRef.current._collectBits(96);
+          const bitsStr = Array.from(bitsArr).map(b => (b ? '1' : '0')).join('');
+          buffer += bitsStr;
+          if (buffer.length > BIT_WINDOW) buffer = buffer.slice(-BIT_WINDOW);
+
+          const active = document.activeElement === outEl;
+          const hasSelection = outEl.selectionStart !== outEl.selectionEnd;
+          if (!(active && hasSelection)) {
+            outEl.value = buffer;
+            outEl.scrollTop = outEl.scrollHeight;
+          }
+          bitLoopHandle = setTimeout(step, 100);
+        }
+        step();
+      }
+
+      async function initRNGFromInputs() {
+        const ps   = parseInt(patchSize.value, 10);
+        const full = fullBits.checked;
+        const rng  = new QuantumCamRNG({ patchSize: ps, fullPatchBits: full });
+        await rng.start();
+        return rng;
+      }
+
+      // Start/stop RNG -------------------------------------------------------
+      startBtn.addEventListener('click', async () => {
+        startBtn.disabled = true;
+        const rng = await initRNGFromInputs();
+        rngRef.current = rng;
+        videoPrev.srcObject = rng._stream;
+        stopBtn.disabled = false;
+        reinitBtn.disabled = false;
+        startBitLoop();
+      });
+
+      stopBtn.addEventListener('click', () => {
+        rngRef.current?.stop();
+        rngRef.current = null;
+        stopBtn.disabled = true;
+        startBtn.disabled = false;
+        reinitBtn.disabled = true;
+        videoPrev.srcObject = null;
+        stopBitLoop();
+        qs('bitStream').value = '';
+      });
+
+      reinitBtn.addEventListener('click', async () => {
+        rngRef.current?.stop();
+        rngRef.current = await initRNGFromInputs();
+        videoPrev.srcObject = rngRef.current._stream;
+        startBitLoop();
+      });
+
+      // Random floats --------------------------------------------------------
+      qs('genFloats').addEventListener('click', async () => {
+        const k = parseInt(qs('floatCount').value, 10);
+        const res = await rngRef.current?.random(k);
+        qs('floatsRes').textContent = res ? Array.from(res).join(', ') : '';
+      });
+
+      // Random ints list -----------------------------------------------------
+      qs('genInts').addEventListener('click', async () => {
+        const low   = parseInt(qs('intLow').value, 10);
+        const high  = parseInt(qs('intHigh').value, 10);
+        const count = parseInt(qs('intCount').value, 10);
+        const ints  = await rngRef.current?.randint(low, high + 1, count);
+        qs('intsRes').textContent = Array.isArray(ints) ? ints.join(', ') : ints.toString();
+      });
+
+      // Shuffle --------------------------------------------------------------
+      qs('shuffleBtn').addEventListener('click', async () => {
+        const arr = JSON.parse(qs('shuffleInput').value);
+        await rngRef.current?.shuffle(arr);
+        qs('shuffleRes').textContent = JSON.stringify(arr);
+      });
+
+	// Sample ---------------------------------------------------------------
+	qs('sampleBtn').addEventListener('click', async () => {
+	  const raw = qs('sampleInput').value;
+	  const k   = parseInt(qs('sampleK').value, 10);
+
+	  const arr = raw
+		.split(/[\n,]+/)               // split on newlines or commas
+		.map(s => s.trim())            // trim each element
+		.filter(s => s.length > 0);    // skip empty strings
+
+	  if (!rngRef.current || arr.length === 0 || k <= 0) {
+		qs('sampleRes').textContent = 'Invalid input or RNG not running.';
+		return;
+	  }
+
+	  const samp = await rngRef.current.sample(arr, k);
+	  qs('sampleRes').textContent = JSON.stringify(samp);
+	});
+
+
+
+      // Random ints from bounds list -----------------------------------------
+      qs('genBoundsInts').addEventListener('click', async () => {
+        const inputStr = qs('intBoundsList').value.trim();
+        const bounds = inputStr.split(',').map(s => parseInt(s.trim(), 10)).filter(x => !isNaN(x) && x > 0);
+
+        if (!rngRef.current || bounds.length === 0) {
+          qs('boundsIntsRes').textContent = 'Invalid input or RNG not running.';
+          return;
+        }
+
+        const promises = bounds.map(x => rngRef.current.randint(1, x + 1));
+        const results = await Promise.all(promises);
+        qs('boundsIntsRes').textContent = results.join(', ');
+      });
+    </script>
+  </body>
+</html>

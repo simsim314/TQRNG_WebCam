@@ -1,0 +1,196 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath} % For math environments like align*
+\usepackage{amsfonts} % For \mathbb, \mathfrak etc.
+\usepackage{amssymb}  % For additional symbols
+\usepackage{graphicx} % For including images
+\usepackage{hyperref} % For clickable links
+\usepackage{booktabs} % For professional-looking tables
+\usepackage{xcolor}   % For colored text (if needed, e.g., for code highlighting)
+\usepackage{geometry} % For page margins
+\geometry{a4paper, margin=1in}
+\usepackage{siunitx} % For proper unit formatting, especially with micro symbol
+
+% Custom commands for consistency and readability
+\newcommand{\N}{\textit{N}}
+\newcommand{\sigmaquant}{\sigma_{\text{photon}}} % For quantum standard deviation in photons
+\newcommand{\muavg}{\mu} % For mean
+\newcommand{\percent}{\%} % Correct percentage symbol
+\newcommand{\textlambda}{\lambda} % Text lambda for clarity
+\newcommand{\textlux}{\text{lx}} % Lux symbol
+\newcommand{\sigmapixel}{\sigma_{\text{pixel}}} % Sigma in pixel units (DN)
+\newcommand{\DN}{\text{DN}} % Digital Number
+\newcommand{\hconstant}{h} % Planck's constant
+\newcommand{\cconstant}{c} % Speed of light
+
+\title{\textbf{A Webcam-Based Random Quantum Generation: Photon Arrival Perspective}}
+\author{Michael Simkin (SimSim314)} % Your name and handle
+\date{June 2024} % Or \date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+The fundamental quantum nature of light dictates that photons arrive at a detector randomly, following Poisson statistics, even from a perfectly stable source. This phenomenon, known as photon shot noise, constitutes an irreducible source of physical randomness. This article provides a theoretical foundation and quantifies how this intrinsic quantum flickering dominates the digital output of a standard consumer webcam. Through a detailed model of a common light source and its interaction with a typical sensor, we predict pixel noise due to photon shot noise. This prediction is then directly compared with empirical webcam measurements, demonstrating a precise correspondence between observed pixel value fluctuations and underlying quantum effects. We show that even in a brightly lit environment, pixel arrays are overwhelmingly dominated by quantum noise, highlighting how ubiquitous imaging devices can serve as accessible platforms for observing true quantum randomness, particularly by focusing on noise-dominant color channels.
+\end{abstract}
+
+\section*{1. Motivation: The Quest for True Randomness and Observable Quantum Effects}
+
+True Random Number Generators (TRNGs) are indispensable for modern cryptography, robust scientific simulations, and secure communication protocols. Unlike pseudo-random number generators (PRNGs), which produce sequences based on deterministic algorithms, TRNGs extract randomness from inherently unpredictable physical processes. While many TRNGs rely on specialized quantum hardware or complex physical phenomena, an accessible and ubiquitous source of true randomness exists in the quantum fluctuations of light itself.
+
+Webcams, present in nearly all contemporary computing devices, are sophisticated arrays of photon detectors. Each pixel in a webcam's sensor acts as a tiny light-sensitive well, counting incident photons over a specific exposure period. The motivation for this work is to establish a clear theoretical understanding of how the intrinsic quantum randomness inherent in photon arrival directly influences the digital output of these consumer-grade sensors. By quantifying this effect, we aim to demonstrate how a standard webcam can serve as a foundation for observing fundamental quantum phenomena in an everyday setting.
+
+\section*{2. Method Explanation: The Quantum Physics of Photon Arrival}
+
+\subsection*{2.1 Light's Granular Nature: From Planck to Poisson}
+
+The understanding that light is not a continuous wave but composed of discrete energy packets, or photons, revolutionized physics in the early 20th century. Max Planck's work on black-body radiation (1900) \cite{Planck1900} introduced energy quantization, and Albert Einstein's explanation of the photoelectric effect (1905) \cite{Einstein1905} firmly established the photon as a fundamental particle.
+
+Crucially, the emission and absorption of these individual photons are probabilistic quantum events. Even when a light source operates at a perfectly constant average intensity (e.g., an ideal LED lamp or ambient room light), the exact number of photons arriving at a specific detector (like a camera pixel) within a given time interval is not fixed. Instead, it fluctuates randomly around the average \cite{Hasinoff06}.
+
+\subsection*{2.2 Photon Shot Noise: The Irreducible Randomness}
+
+The statistical nature of these fluctuations is precisely described by the \textbf{Poisson distribution}. For a light source like those found in an office, the number of photons detected (\N) in a fixed time interval follows this distribution \cite{Hasinoff06, WikipediaShotNoise}.
+
+A key property of the Poisson distribution is that its variance ($\sigmaquant^2$) is equal to its mean ($\muavg$ or \N):
+$$
+\sigmaquant^2 = \muavg
+$$
+Therefore, the standard deviation ($\sigmaquant$), which quantifies the typical size of the random fluctuation (in photons), is the square root of the mean number of photons:
+$$
+\sigmaquant = \sqrt{\muavg} \quad \text{or} \quad \sigmaquant = \sqrt{\N}
+$$
+This $\sqrt{\N}$ fluctuation is known as \textbf{photon shot noise}. It is not caused by imperfections in the light source or the detector (e.g., as first analyzed by Walter Schottky in 1918 for electron emission \cite{Schottky1918}); it is an irreducible, fundamental consequence of the quantum mechanics of light. No matter how stable the light source or how perfect the sensor, this $\sqrt{\N}$ uncertainty in the photon count will always be present, providing a true source of physical randomness.
+
+\subsubsection*{2.2.1 Quantifying Quantum Flicker Domination}
+A pixel's digital output is mapped to a specific digital value (a "bin") based on its mean photon count. However, due to photon shot noise, the actual photon count for any given frame will fluctuate, potentially causing the pixel's value to fall into an adjacent "bin" (e.g., reading 99 or 101 when the average is 100). This phenomenon is referred to as quantum flickering, where the value "spreads on two bins" or causes visible "stripes" of color dither.
+
+The underlying distribution of photon counts, for sufficiently large \N, can be approximated by a Gaussian distribution. This Gaussian "smears" across the discrete digital bins that represent the pixel's output values. The Least Significant Bit (LSB) of a pixel value (which alternates between 0 for even bins and 1 for odd bins) is particularly sensitive to these fluctuations.
+
+Let $\Delta_{\text{LSB}}$ be the number of photons corresponding to one digital gradation (one LSB). The probability that a pixel's measured photon count falls within its intended digital bin (i.e., its value remains "stable" and its LSB does not flip) is given by the error function:
+$$
+P_{\text{stable}} = \text{erf}\left(\frac{\Delta_{\text{LSB}}/2}{\sqrt{2}\sigmaquant}\right)
+$$
+where $\sigmaquant = \sqrt{\N}$ is the photon shot noise for the mean photon count \N\ associated with that pixel value. The term $\Delta_{\text{LSB}}/2$ represents the half-width of a digital bin in photon units.
+
+The probability of quantum flicker (the value falling into another bin, causing the LSB to flip) is $P_{\text{flicker}} = 1 - P_{\text{stable}}$. For the quantum effect to strongly influence the pixel's output, leading to frequent LSB flips, the noise relative to the digital bin width must be significant. When the noise distribution is spread widely across many discrete LSB boundaries, the LSB of the pixel value effectively becomes a random coin flip, approaching a 0.5 probability for either state. This inherent quantum randomness can then be extracted.
+
+\section*{3. Model and Case Study: Quantum Flicker from a 500 Lux Environment}
+
+\subsection*{3.1 Physical Model: Light Source and Sensor Parameters}
+
+For this case study, we consider a typical brightly lit indoor environment with an illuminance of \textbf{500 lux}. The webcam sensor is assumed to have pixels of size \SI{1.3}{\micro\meter} x \SI{1.3}{\micro\meter}, resulting in a pixel area ($A_{\text{px}}$) of \SI{1.69e-12}{\meter\squared} or \SI{1.69}{\micro\meter\squared} \cite{Fontaine2010}. The video frame rate is 30 frames per second, corresponding to an exposure time ($t_{\text{exp}}$) of 1/30 s.
+
+\subsubsection*{3.1.1 Detailed Derivation of Photons per Unit Exposure per Unit Area}
+Following the methodology from \cite{JackBlog2014}, the mean number of photons ($n_{ph}$) incident on a sensor per unit exposure (lx-s) per unit area (m$^2$) can be estimated. This derivation assumes a Daylight illuminant (D53) and considers the photopic eye response function ($V(\lambda)$).
+
+The mean energy of photons ($E_m$) in the visible range (taken as \SI{395}{\nano\meter} to \SI{718}{\nano\meter}, with a mean wavelength $\lambda_{avg} = \SI{556.5}{\nano\meter}$) is calculated using Planck's constant ($\hconstant = \SI{6.626e-34}{\joule\second}$) and the speed of light ($\cconstant = \SI{3e8}{\meter\per\second}$):
+$$
+E_{m}= \frac{\hconstant \cdot \cconstant}{\lambda_{avg}} \: \text{joules/photon}
+$$
+$$
+E_{m}= \frac{(\SI{6.626e-34}{\joule\second}) \cdot (\SI{3e8}{\meter\per\second})}{\SI{556.5e-9}{\meter}} \approx \textbf{\SI{3.569e-19}{\joule}}
+$$
+
+The integral of the photopic function $V(\lambda)$ from \SI{380}{\nano\meter} to \SI{780}{\nano\meter} is given as \SI{113.042}{}. Using these values, the number of photons per lx-s per m$^2$ ($n_{ph}$) is derived:
+$$
+n_{ph}= \frac{\lambda_2 - \lambda_1}{E_{m}}\cdot \frac{1}{683 \cdot \int\limits_{380_{nm}}^{780_{nm}} V(\lambda) d\lambda} \: ,\:\frac{\text{photons}}{\text{lx}\cdot\text{s} \cdot \: \text{m}^2}
+$$
+Substituting the values ($\lambda_1 = \SI{394.5}{\nano\meter}, \lambda_2 = \SI{718.5}{\nano\meter}$):
+$$
+n_{ph} = \frac{\SI{718.5e-9}{\meter} - \SI{394.5e-9}{\meter} }{(\SI{3.569e-19}{\joule}) \times \text{683.002} \times \text{113.042}}
+$$
+$$
+n_{ph} = \frac{\SI{324e-9}{\meter}}{\SI{2.766e-14}{\joule}} \approx \textbf{\SI{1.171e16}{\text{photons}\per\lux\per\second\per\meter\squared}}
+$$
+Converting to photons per lx-s per \si{\micro\meter\squared}:
+$$
+n_{ph} = \SI{1.171e16}{\text{photons}\per\lux\per\second\per\meter\squared} \times (\SI{1e-6}{\meter\per\micro\meter})^2 \approx \textbf{\SI{11710}{\text{photons}\per\lux\per\second\per\micro\meter\squared}}
+$$
+The blog post notes that for a Daylight standard 'D' illuminant at \SI{5300}{\kelvin} (D53), this value reduces to approximately \textbf{\SI{11000}{\text{photons}\per\lux\per\second\per\micro\meter\squared}}. We will use this more accurate estimate for our calculations.
+
+\subsubsection*{3.1.2 Calculation of Total Photons per Pixel per Frame ($\N_{\text{total}}$)}
+The total number of photons incident on a single pixel per video frame ($\N_{\text{total}}$) is calculated by multiplying the derived conversion factor ($n_{ph} = \SI{11000}{\text{photons}\per\lux\per\second\per\micro\meter\squared}$) by the illuminance ($L = \SI{500}{\lux}$), exposure time ($t_{\text{exp}} = \text{1/30 s}$), and pixel area ($A_{\text{px, \micro\meter\squared}} = \SI{1.69}{\micro\meter\squared}$):
+$$
+\N_{\text{total}} = n_{ph} \times L \times t_{\text{exp}} \times A_{\text{px, \micro\meter\squared}}
+$$
+$$
+\N_{\text{total}} = \text{11000} \times \text{500 lx} \times (\text{1/30 s}) \times \text{1.69 \micro\meter\squared}
+$$
+$$
+\N_{\text{total}} \approx \textbf{309833 photons}
+$$
+Thus, the total number of photons incident on a single pixel per video frame in a \SI{500}{\lux} environment is estimated to be approximately \textbf{309833 photons}. This value represents the total visible light photons incident on the pixel, which will then be filtered and detected by the individual color channels.
+
+\subsection*{3.2 Photon Budget and Pixel Noise Prediction by Color (Model)}
+
+We distribute this total photon budget per pixel per frame ($\N_{\text{total}}$) by color. While the \SI{11000}{\text{photons}\per\lux\per\second\per\micro\meter\squared} factor is derived from the photopic (eye's) response, which peaks in the green region, it represents the overall visible light. For a typical white light source, the energy (and thus photon count) is distributed across the Red, Green, and Blue spectral bands. We use typical daylight energy distribution fractions for this model: Green $k_G = 0.45$, Red $k_R = 0.30$, and Blue $k_B = 0.25$.
+
+The number of photons per channel is then:
+$$
+\N_G = k_G \N_{\text{total}},\qquad \N_R = k_R \N_{\text{total}},\qquad \N_B = k_B \N_{\text{total}}.
+$$
+\begin{itemize}
+    \item \N$_\text{Green}$ = $\text{0.45} \times \text{309833} \approx$ \textbf{139425 photons}
+    \item \N$_\text{Red}$ = $\text{0.30} \times \text{309833} \approx$ \textbf{92950 photons}
+    \item \N$_\text{Blue}$ = $\text{0.25} \times \text{309833} \approx$ \textbf{77458 photons}
+\end{itemize}
+The total photon budget per pixel per frame predicted by this physical model is approximately \textbf{309833 photons}.
+
+Based on the instruction to use the formula $\sigmapixel = \frac{100}{\sqrt{\N}}$, where $\sigmapixel$ is the predicted pixel noise in Digital Numbers (DN) and $\N$ is the mean number of photons, the predicted pixel noise for each color channel is calculated. This model implies that the lower the photon count ($\N$), the larger the sigma in pixel units ($\sigmapixel$).
+
+$$
+\sigmapixel = \frac{100}{\sqrt{\N}}.
+$$
+\begin{itemize}
+    \item $\sigmapixel_\text{Green} = \frac{100}{\sqrt{139425}} \approx \frac{100}{373.40} \approx \textbf{0.27 \DN}$
+    \item $\sigmapixel_\text{Red} = \frac{100}{\sqrt{92950}} \approx \frac{100}{304.88} \approx \textbf{0.33 \DN}$
+    \item $\sigmapixel_\text{Blue} = \frac{100}{\sqrt{77458}} \approx \frac{100}{278.31} \approx \textbf{0.36 \DN}$
+\end{itemize}
+
+\subsection*{3.3 Empirical Webcam Results and Comparison}
+
+** add here 0.33 per channel ** 
+
+compute for white / black stripes of gasussian bias per sigma assuming it be 1 + a and 1 + b compute c for xor two pixels 
+
+make table
+
+The full source code for \texttt{generator.py}, including setup instructions and usage details, can be found in the accompanying GitHub repository for this project.
+
+\begin{thebibliography}{9}
+
+\bibitem{Planck1900}
+Planck, M. (1900). "Zur Theorie des Gesetzes der Energieverteilung im Normalspectrum." \textit{Verhandlungen der Deutschen Physikalischen Gesellschaft}, 2, 237--245.
+
+\bibitem{Einstein1905}
+Einstein, A. (1905). "Über einen die Erzeugung und Verwandlung des Lichtes betreffenden heuristischen Gesichtspunkt." \textit{Annalen der Physik}, 322(6), 132--148.
+
+\bibitem{Schottky1918}
+Schottky, W. (1918). "Über spontane Stromschwankungen in verschiedenen Elektronenemissionserscheinungen." \textit{Annalen der Physik}, 362(1), 541--567.
+
+\bibitem{Hasinoff06}
+Hasinoff, S. (2006). "Photon, Poisson Noise." MIT CSAIL. \url{https://people.csail.mit.edu/hasinoff/pubs/hasinoff-photon-2012-preprint.pdf}.
+
+\bibitem{WikipediaShotNoise}
+Wikipedia. "Shot noise." (Accessed June 2024). \url{https://en.wikipedia.org/wiki/Shot_noise}.
+
+\bibitem{RaspberryPiCamV2}
+Raspberry Pi Foundation. "Raspberry Pi Camera v2 (Sony IMX219) specification sheet." (Accessed June 2024). \url{https://www.adafruit.com/product/3400}. (Note: Pixel area used as a representative value for common webcam sensors.)
+
+\bibitem{Fontaine2010}
+Fontaine, R. (2010). "A Review of the 1.4 µm Pixel Generation." Image Sensors World. \url{https://imagesensors.org/Articles/A_Review_of_the_1_4_um_Pixel_Generation.pdf}. (Used for representative pixel pitch data).
+
+\bibitem{JackBlog2014}
+Jack. (2014). "How Many Photons on a Pixel." \textit{Strolls with my Dog}. \url{https://strollswithmydog.com/2014/09/10/how-many-photons-on-a-pixel/}.
+
+\bibitem{Sletten2021}
+Sletten, T. L., et al. (2021). "Spectral power distribution of the fluorescent light sources used in the intervention and traditional light conditions." \textit{Nature Scientific Data}, Figure 2, and associated data table. \url{https://www.researchgate.net/figure/Spectral-power-distribution-of-the-fluorescent-light-sources-used-in-the-intervention_fig2_35180234}.
+
+\bibitem{Hamamatsu}
+Hamamatsu Photonics. "Photon Counting Handbook." \url{https://www.hamamatsu.com/resources/pdf/etd/PMT_handbook_v3.pdf}.
+
+\end{thebibliography}
+
+\end{document}
