@@ -1,5 +1,5 @@
 # TQRNG WebCam
-[Site Link](https://simsim314.github.io/TQRNG_WebCam/)
+[Site Link](https://simsim314.github.io/TQRNG_WebCam/) (Select Start RNG to start using)
 
 This repository provides [python](quantum_cam_rng.py) and [js](quantum_cam_rng.js) libraries for True Quantum Random Generator based on webcam streaming, xorins least significant bit of batches of rgb pixels (i.e. for several pixels r xor g xor b).  
 
