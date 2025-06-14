@@ -1,8 +1,8 @@
-# TQRNG_WebCam
+# TQRNG WebCam
 
-This repository provides python and js libraries for True Quantum Random Generator based on webcam streaming, xorins least significant bit of batches of pixels. 
+This repository provides [python](quantum_cam_rng.py) and [js](quantum_cam_rng.js) libraries for True Quantum Random Generator based on webcam streaming, xorins least significant bit of batches of rgb pixels (i.e. for several pixels r xor g xor b).  
 
-A site and javascript and code are included. 
+A [site](https://simsim314.github.io/TQRNG_WebCam/) and [python test code](test_random.py) are included. 
 
 For image of size 640x480 on 30 fps it should give ~180K random bits, or 6K random float/sec. 
 
